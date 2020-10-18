@@ -71,3 +71,10 @@ def command(request):
     )
 
     return HttpResponse("")
+
+@csrf_exempt
+def interaction(request):
+  if not signature_verifier.is_valid_request(request.body, request.headers):
+        return HttpResponse("invalid request", status=403)
+  
+  return HttpResponse("Request processed corectly")
