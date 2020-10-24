@@ -3,6 +3,8 @@ from slack import WebClient
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import os
+import json
+from slack_integration.models import HomeOffice
 from slack.signature import SignatureVerifier
 signature_verifier = SignatureVerifier(os.environ["SLACK_SIGNING_SECRET"])
 
@@ -47,7 +49,7 @@ def command(request):
                                 "text": "Select a date",
                                 "emoji": True
                         },
-                        "action_id": "datepicker-action"
+                        "action_id": "datepicker-since-action"
                     }
                 },
                 {
@@ -63,7 +65,7 @@ def command(request):
                                 "text": "Select a date",
                                 "emoji": True
                         },
-                        "action_id": "datepicker-action"
+                        "action_id": "datepicker-till-action"
                     }
                 }
             ]
@@ -74,7 +76,42 @@ def command(request):
 
 @csrf_exempt
 def interaction(request):
-  if not signature_verifier.is_valid_request(request.body, request.headers):
-        return HttpResponse("invalid request", status=403)
+  if not validate_interaction_request(request):
+      return HttpResponse("invalid request", status=403)
   
-  return HttpResponse("Request processed corectly")
+  payload = json.loads(request.POST["payload"])
+  
+  if payload["type"] == "view_submission":
+      values = payload["view"]["state"]["values"]
+      since = get_date_from_values(values, "datepicker-since-action")
+      till = get_date_from_values(values, "datepicker-till-action")
+      user = payload["user"]["id"]
+      
+      ho = HomeOffice(user_id=user, since=since, till=till)
+      ho.save()
+      client.chat_postMessage(channel='G01D8FR651R', text=str(ho))
+      
+      return HttpResponse(since + till + user)
+
+  return HttpResponse(request.POST.get("type", False))
+
+def validate_interaction_request(request):
+  if not signature_verifier.is_valid_request(request.body, request.headers):
+    return False
+  
+  if not "payload" in request.POST:
+    return False
+  
+  payload = json.loads(request.POST["payload"])
+      
+  if not "type" in payload:
+      return False
+  
+  return True
+
+def get_date_from_values(values, action_id):
+    for key, value in values.items():
+        if action_id in value:
+            return value[action_id]["selected_date"]
+
+        
