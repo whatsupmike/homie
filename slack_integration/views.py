@@ -4,6 +4,10 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import os
 import json
+
+from datetime import datetime, date
+from collections import namedtuple
+
 from slack_integration.models import HomeOffice
 from slack.signature import SignatureVerifier
 signature_verifier = SignatureVerifier(os.environ["SLACK_SIGNING_SECRET"])
@@ -91,8 +95,11 @@ def interaction(request):
         till = get_date_from_values(values, "datepicker-till-action")
         user = payload["user"]
 
-        if since > till:
+        if since > till or since < date.today().strftime('%Y-%m-%d'):
             return JsonResponse(interaction_response("Invalid Date"))
+
+        if validate_user_other_ho_requests(user["id"], since, till):
+            return JsonResponse(interaction_response("Date already requested"))
 
         #   Additional user data
         user_response = client.users_profile_get(user=user["id"])
@@ -136,3 +143,29 @@ def interaction_response(text):
 
 def success_message_text(ho, username):
     return "@" + username + " requested for home office. *" + ho.since + "* - *" + ho.till + "*"
+
+def validate_user_other_ho_requests(user_id, since, till):
+    ho_requests = get_user_ho_requests(user_id)
+    for ho in ho_requests.values():
+        if validate_date_overlaping(ho, since, till):
+            return True
+    return False
+
+def get_user_ho_requests(user_id):
+    return HomeOffice.objects.filter(since__gte=date.today(), user_id__startswith=user_id)
+
+def validate_date_overlaping(ho, start_date, end_date):
+    Range = namedtuple('Range', ['start', 'end'])
+
+    r1 = Range(start=get_datetime_from_string(start_date), end=get_datetime_from_string(end_date))
+    r2 = Range(start=ho["since"], end=ho["till"])
+
+    latest_start = max(r1.start, r2.start)
+    earliest_end = min(r1.end, r2.end)
+
+    delta = (earliest_end - latest_start).days + 1
+
+    return delta > 0
+
+def get_datetime_from_string(datetime_string):
+    return datetime.strptime(datetime_string, '%Y-%m-%d').date()
