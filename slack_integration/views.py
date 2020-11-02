@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 import os
 import json
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from collections import namedtuple
 
 from slack_integration.models import HomeOffice
@@ -20,6 +20,12 @@ def command(request):
     if not signature_verifier.is_valid_request(request.body, request.headers):
         return HttpResponse("invalid request", status=403)
 
+    if request.POST["text"] == "list":
+        return JsonResponse(get_users_recently_on_ho())
+    
+    if request.POST["text"] == "today":
+        return JsonResponse(get_users_today_on_ho())
+    
     client.views_open(
         trigger_id=request.POST["trigger_id"],
         view={
@@ -168,3 +174,41 @@ def validate_date_overlaping(ho, start_date, end_date):
 
 def get_datetime_from_string(datetime_string):
     return datetime.strptime(datetime_string, '%Y-%m-%d').date()
+
+def get_users_recently_on_ho():
+    delta = timedelta(days=21)
+    users_on_ho = HomeOffice.objects.all().filter(till__gte=date.today()-delta).order_by('user_id', 'since')
+
+    return format_list_message(ho_to_array(users_on_ho))
+
+def get_users_today_on_ho():
+    users_on_ho = HomeOffice.objects.filter(since__lte=date.today(), till__gte=date.today())
+
+    return format_list_message(ho_to_array(users_on_ho))
+
+def ho_to_array(ho_objects):
+    value = {}
+    for ho in ho_objects.values():
+        if not ho["user_id"] in value:
+             value[ho["user_id"]] = ""
+
+        value[ho["user_id"]] += "*" + str(ho["since"]) + " - " + str(ho["till"]) + "*\n\n"
+    return value
+
+def format_list_message(users_array):
+    blocks = []
+    for key, value in users_array.items():
+        blocks.append({
+            "type": "section",
+            "text" : {
+                "type": "mrkdwn",
+                "text": get_user_mention_string(key) + "\n\n" + value
+            }
+        })
+        blocks.append({"type": "divider"})
+    return {
+        "blocks": blocks
+    }
+
+def get_user_mention_string(user_id):
+    return "<@" + user_id + ">"
