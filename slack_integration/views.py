@@ -132,7 +132,6 @@ def get_date_from_values(values, action_id):
         if action_id in value:
             return value[action_id]["selected_date"]
 
-
 def interaction_response(text):
     return {
         "response_action": "errors",
