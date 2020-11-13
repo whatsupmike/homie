@@ -4,6 +4,8 @@ services:
   db:
     env_file: ./homie/.env
     image: postgres
+    ports:
+      - "${DB_PORT}:5432"
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
