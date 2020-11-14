@@ -192,7 +192,7 @@ def ho_to_array(ho_objects):
         if not ho["user_id"] in value:
              value[ho["user_id"]] = ""
 
-        value[ho["user_id"]] += "*" + str(ho["since"]) + " - " + str(ho["till"]) + "*\n\n"
+        value[ho["user_id"]] += "*" + str(ho["since"]) + " - " + str(ho["till"]) + "*\n"
     return value
 
 def format_list_message(users_array):
@@ -200,12 +200,18 @@ def format_list_message(users_array):
     for key, value in users_array.items():
         blocks.append({
             "type": "section",
-            "text" : {
-                "type": "mrkdwn",
-                "text": get_user_mention_string(key) + "\n\n" + value
-            }
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": get_user_mention_string(key) 
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": value
+                }
+            ]
         })
-        blocks.append({"type": "divider"})
+
     return {
         "blocks": blocks
     }
