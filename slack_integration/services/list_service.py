@@ -50,4 +50,3 @@ class ListService:
     @classmethod
     def get_user_mention_string(self, user_id):
         return "<@" + user_id + ">"
-        

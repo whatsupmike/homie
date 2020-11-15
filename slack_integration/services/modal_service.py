@@ -85,4 +85,3 @@ class ModalService:
     @classmethod
     def get_modal_json_for_edit_request(self):
         return {} 
-        

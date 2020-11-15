@@ -52,4 +52,3 @@ class RequestValidator:
     @classmethod
     def get_user_ho_requests(self, user_id):
         return HomeOffice.objects.filter(since__gte=date.today(), user_id__startswith=user_id)
-        
