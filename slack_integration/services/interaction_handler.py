@@ -68,7 +68,7 @@ class InteractionHandler:
         if not user_response["ok"]:
             return self.validation_message_to_object(False, "Invalid User")
 
-        ho = HomeOffice(user_id=user["id"], since=since, till=till)
+        ho = HomeOffice(user_id=user["id"], user_name=user["username"], since=since, till=till)
         ho.save()
 
         return self.validation_message_to_object(True, "Success")
