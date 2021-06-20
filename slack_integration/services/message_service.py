@@ -56,6 +56,13 @@ class MessageService:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
+                        "text": "`" + command_name + " delete` :\nDelete lasting or upcomming HO"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
                         "text": "`" + command_name + " list` :\nList all HO requests 3 weeks back"
                     }
                 },
@@ -87,3 +94,14 @@ class MessageService:
                 }
             ]
         }
+    
+    @classmethod
+    def success_message_text(self, username, since, till):
+        return "@" + username + " requested for home office. *" + since + "* - *" + till + "*"
+
+    @classmethod
+    def removed_message_text(self, username, texts):
+        result = ''
+        for text in texts:
+            result += text + "\n"
+        return ":x: @" + username + " removed home office.\n" + result

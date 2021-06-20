@@ -14,6 +14,12 @@ class ListService:
         users_on_ho = HomeOffice.objects.filter(since__lte=date.today(), till__gte=date.today())
 
         return self.format_list_message(self.ho_to_array(users_on_ho))
+
+    @classmethod
+    def get_users_on_ho_in_future(self):
+        users_on_ho = HomeOffice.objects.filter(since__lte=date.today(), till__gte=date.today())
+
+        return self.format_list_message(self.ho_to_array(users_on_ho))
     
     @classmethod
     def ho_to_array(self, ho_objects):
