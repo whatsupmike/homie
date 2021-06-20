@@ -6,7 +6,6 @@ from slack import WebClient
 slack_token = os.environ["SLACK_API_TOKEN"]
 client = WebClient(token=slack_token)
 
-
 class ModalService:
     @classmethod
     def open_add_modal(self, trigger_id):
