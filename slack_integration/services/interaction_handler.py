@@ -58,7 +58,7 @@ class InteractionHandler:
 
     @classmethod
     def validate_and_save_add_request(self, user, since, till):
-        if since > till or since < date.today().strftime('%Y-%m-%d'):
+        if since > till:
             return self.validation_message_to_object(False, "Invalid Date")
 
         if RequestValidator.validate_user_other_ho_requests(user["id"], since, till):
