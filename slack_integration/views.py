@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import os
 import json
+import logging
 
 from datetime import datetime, date, timedelta
 from collections import namedtuple
@@ -21,6 +22,7 @@ slack_token = os.environ["SLACK_API_TOKEN"]
 client = WebClient(token=slack_token)
 
 command_name = os.environ["SLACK_COMMAND_NAME"]
+logger = logging.getLogger('homie_access')
 
 @csrf_exempt
 def command(request):
@@ -28,6 +30,8 @@ def command(request):
         return HttpResponse("invalid request", status=403)
 
     command_text = request.POST["text"]
+    user = InteractionHandler.get_user_from_request(request)
+    logger.info(f"User {user['username']} requested command {command_text}")
     if command_text == "list":
         return JsonResponse(ListService.get_users_recently_on_ho())
     
@@ -46,7 +50,6 @@ def command(request):
         return JsonResponse(InteractionHandler.handle_add_request_from_command(request, (date.today() + timedelta(days=1)).strftime('%Y-%m-%d')))
 
     if command_text == "delete":
-        user = InteractionHandler.get_user_from_request(request)
         is_valid = ModalService.open_delete_modal(request.POST["trigger_id"], user["id"])
 
         return HttpResponse("" if is_valid else "Nothing to edit")
