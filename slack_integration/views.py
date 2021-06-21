@@ -45,6 +45,12 @@ def command(request):
     if command_text == "tomorrow":
         return JsonResponse(InteractionHandler.handle_add_request_from_command(request, (date.today() + timedelta(days=1)).strftime('%Y-%m-%d')))
 
+    if command_text == "delete":
+        user = InteractionHandler.get_user_from_request(request)
+        is_valid = ModalService.open_delete_modal(request.POST["trigger_id"], user["id"])
+
+        return HttpResponse("" if is_valid else "Nothing to edit")
+
     return JsonResponse(MessageService.get_help_message_json())
 
 @csrf_exempt

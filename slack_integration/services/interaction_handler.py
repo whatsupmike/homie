@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta
 from slack_integration.models import HomeOffice
+from slack_integration.services.message_service import MessageService
 import os
 import json
 from slack import WebClient
@@ -23,8 +24,8 @@ class InteractionHandler:
         if(callback_id == "add_request"):
             return self.process_add_request_from_payload(payload)
 
-        if(callback_id == "edit_request"):
-            return {}
+        if(callback_id == "delete_request"):
+            return self.process_delete_request_from_payload(payload)
 
         return {}
 
@@ -57,7 +58,7 @@ class InteractionHandler:
 
     @classmethod
     def validate_and_save_add_request(self, user, since, till):
-        if since > till or since < date.today().strftime('%Y-%m-%d'):
+        if since > till:
             return self.validation_message_to_object(False, "Invalid Date")
 
         if RequestValidator.validate_user_other_ho_requests(user["id"], since, till):
@@ -72,21 +73,47 @@ class InteractionHandler:
         ho.save()
 
         return self.validation_message_to_object(True, "Success")
+    
+    @classmethod
+    def process_delete_request_from_payload(self, payload):
+        if payload["type"] == "view_submission":
+            values = payload["view"]["state"]["values"].values()
+            values_iterator = iter(values)
+            block = next(values_iterator).values()
+            block_iterator = iter(block)
+            selected = next(block_iterator)
+            user = payload["user"]
+            texts = []
+
+            texts = self.delete_requests(user, selected)
+            self.notify_on_delete_request(user, texts)
+
+        return {}
+    
+    @classmethod
+    def delete_requests(self, user, selected):
+        texts = []
+        for option in selected["selected_options"]:
+            HomeOffice.objects.get(pk=option["value"]).delete()
+            texts.append(option["text"]["text"])
+
+        return texts
 
     @classmethod
     def notify_on_new_request(self, user, since, till):
         client.chat_postMessage(
-                channel=os.environ["SLACK_CHANNEL"], text=self.success_message_text(user["username"], since, till), link_names=1)
+                channel=os.environ["SLACK_CHANNEL"], text=MessageService.success_message_text(user["username"], since, till), link_names=1)
+
+    @classmethod
+    def notify_on_delete_request(self, user, texts):
+        client.chat_postMessage(
+                channel=os.environ["SLACK_CHANNEL"], text=MessageService.removed_message_text(user["username"], texts), link_names=1)
 
     @classmethod
     def get_date_from_values(self, values, action_id):
         for key, value in values.items():
             if action_id in value:
                 return value[action_id]["selected_date"]
-    
-    @classmethod
-    def success_message_text(self, username, since, till):
-        return "@" + username + " requested for home office. *" + since + "* - *" + till + "*"
 
     @classmethod
     def error_response_json(self, text):
